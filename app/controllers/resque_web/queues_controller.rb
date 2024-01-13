@@ -1,14 +1,12 @@
 module ResqueWeb
   class QueuesController < ResqueWeb::ApplicationController
 
+    include ResqueWeb::QueuesHelper
+
     def index
       respond_to do |format|
         format.html
-        format.json do
-          Resque.queues.sort_by(&:to_s).each_with_object({}) do |queue_name, memo|
-            memo[queue_name] = Redis.queue_size(queue_name)
-          end
-        end
+        format.json { render json: queues_overview }
       end
     end
 
@@ -26,5 +24,17 @@ module ResqueWeb
       redirect_to queue_path(params[:id])
     end
 
+    protected
+
+    def queues_overview
+      normal_queues = queue_names.each_with_object({}) do |queue_name, memo|
+        memo[queue_name] = queue_size(queue_name)
+      end
+
+      {
+        overview: normal_queues,
+        failed: failed_queue_size('failed')
+      }
+    end
   end
 end
